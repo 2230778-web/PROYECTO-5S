@@ -1,33 +1,31 @@
-/* script.js - comportamiento principal */
+/* script.js — versión completa: COCO-SSD + heurística de derrames + overlay */
 let model = null;
 const video = document.getElementById('video');
 const canvas = document.getElementById('canvas');
 const photoPreview = document.getElementById('photoPreview');
+const heatOverlay = document.getElementById('heatOverlay');
 const startBtn = document.getElementById('startBtn');
 const captureBtn = document.getElementById('captureBtn');
-const analyzeBtn = document.getElementById('analyzeBtn');
-const calcBtn = document.getElementById('calcBtn');
 const downloadBtn = document.getElementById('downloadBtn');
 const copyBtn = document.getElementById('copyBtn');
 const tgBtn = document.getElementById('tgBtn');
 const detectionsDiv = document.getElementById('detections');
 const areaInput = document.getElementById('areaInput');
 const resultBox = document.getElementById('resultBox');
-
-const checklistForm = document.getElementById('checklistForm');
+const statusDiv = document.getElementById('status');
 
 let stream = null;
 let lastImageDataUrl = null;
 
-/* --------------- Cargar modelo --------------- */
+/* ----------------- Cargar modelo COCO-SSD ----------------- */
 async function loadModel() {
-  detectionsDiv.innerText = 'Cargando modelo de detección (TensorFlow COCO-SSD)...';
+  statusDiv.innerText = 'Cargando modelo de detección (TensorFlow COCO-SSD)...';
   model = await cocoSsd.load();
-  detectionsDiv.innerText = 'Modelo listo ✅';
+  statusDiv.innerText = 'Modelo listo ✅';
 }
 loadModel();
 
-/* --------------- Cámara --------------- */
+/* ----------------- Cámara ----------------- */
 startBtn.onclick = async () => {
   try {
     stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
@@ -40,6 +38,7 @@ startBtn.onclick = async () => {
   }
 };
 
+/* ----------------- Capturar y analizar ----------------- */
 captureBtn.onclick = () => {
   canvas.width = video.videoWidth || 1280;
   canvas.height = video.videoHeight || 720;
@@ -48,33 +47,48 @@ captureBtn.onclick = () => {
   const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
   lastImageDataUrl = dataUrl;
   photoPreview.src = dataUrl;
-  analyzeBtn.disabled = false;
-  downloadBtn.disabled = false;
-  copyBtn.disabled = true;
-  tgBtn.disabled = true;
-  resultBox.innerText = 'Foto capturada. Presiona "Analizar".';
-};
 
-/* --------------- Analizar con COCO-SSD --------------- */
-analyzeBtn.onclick = async () => {
-  if (!model) { alert('Modelo no cargado aún. Espera un momento.'); return; }
-  if (!lastImageDataUrl) { alert('Primero captura una foto.'); return; }
-
-  // pasar la imagen a un elemento Image para detectar
-  const img = new Image();
-  img.src = lastImageDataUrl;
-  img.onload = async () => {
-    detectionsDiv.innerText = 'Analizando imagen...';
-    const predictions = await model.detect(img, 10);
-    console.log('predictions', predictions);
-    renderDetections(predictions);
-    suggestAnswers(predictions);
-    resultBox.innerText = 'Sugerencias generadas. Ajusta el checklist si deseas y presiona "Calcular veredicto".';
-    copyBtn.disabled = false;
-    tgBtn.disabled = false;
+  // ajustar overlay al tamaño de la imagen visualizada (espera a que la img cargue)
+  photoPreview.onload = () => {
+    heatOverlay.width = photoPreview.naturalWidth;
+    heatOverlay.height = photoPreview.naturalHeight;
+    heatOverlay.style.width = photoPreview.width + 'px';
+    heatOverlay.style.height = photoPreview.height + 'px';
+    heatOverlay.style.left = photoPreview.offsetLeft + 'px';
+    heatOverlay.style.top = photoPreview.offsetTop + 'px';
   };
+
+  downloadBtn.disabled = false;
+  copyBtn.disabled = false;
+  tgBtn.disabled = false;
+  resultBox.innerText = 'Foto capturada. Analizando...';
+  analyzeImageDataUrl(dataUrl);
 };
 
+/* ----------------- Analizar imagen ----------------- */
+async function analyzeImageDataUrl(dataUrl) {
+  if (!model) { resultBox.innerText = 'Modelo no cargado aún. Espera.'; return; }
+  const img = new Image();
+  img.src = dataUrl;
+  img.onload = async () => {
+    detectionsDiv.innerText = 'Ejecutando detección de objetos...';
+    // correr COCO-SSD y heurística (paralelo)
+    const [predictions, spill] = await Promise.all([
+      model.detect(img, 20),
+      detectSpillHeuristic(img, { downscale: 0.25 })
+    ]);
+
+    renderDetections(predictions);
+    // dibujar heatmap escalado al tamaño real de preview
+    drawHeatmapOverlay(spill.heatmapCanvas, img.width, img.height, photoPreview);
+
+    // inferir 5S a partir de detecciones + derrame
+    const inference = infer5SFromDetections(predictions, spill);
+    showResult(inference, spill);
+  };
+}
+
+/* ----------------- Render detections ----------------- */
 function renderDetections(preds) {
   if (!preds || preds.length === 0) {
     detectionsDiv.innerText = 'No se detectaron objetos relevantes.';
@@ -88,66 +102,83 @@ function renderDetections(preds) {
   detectionsDiv.innerHTML = html;
 }
 
-/* --------------- Heurísticas para checklist --------------- */
-function suggestAnswers(predictions) {
-  // Contar ciertos objetos que consideramos "clutter"
-  const clutterLabels = new Set(['bottle','cup','bowl','book','cell phone','remote','laptop','handbag','backpack','chair','box','suitcase','tv','microwave']);
+/* ----------------- Heurística / Inferencia 5S combinada ----------------- */
+function infer5SFromDetections(predictions, spill) {
+  // similar heurística anterior pero integrando derrame
+  const clutterSet = new Set(['bottle','cup','bowl','book','cell phone','remote','laptop','handbag','backpack','chair','box','suitcase','tv','microwave','vase','frisbee']);
   let clutterCount = 0;
-  let chairDetected = false;
-  let personDetected = false;
-  if (predictions && predictions.length) {
-    predictions.forEach(p => {
-      const cls = p.class.toLowerCase();
-      if (clutterLabels.has(cls)) clutterCount++;
-      if (cls === 'chair') chairDetected = true;
-      if (cls === 'person') personDetected = true;
-    });
-  }
+  let toolLikeCount = 0;
+  let personCount = 0;
 
-  // reglas simples:
-  // Seiri: si clutterCount <= 2 -> Sí, else No
-  // Seiton: si chairDetected true y clutterCount <=3 then Sí else No
-  // Seiso: si clutterCount <=1 -> Sí else No
-  // Seiketsu: no detectable -> sugerir "No" para que usuario revise
-  // Shitsuke: no detectable -> sugerir "No" (necesita auditoría humana)
-  const suggestions = {
-    Seiri: clutterCount <= 2 ? '1' : '0',
-    Seiton: (chairDetected && clutterCount <= 3) ? '1' : '0',
-    Seiso: clutterCount <= 1 ? '1' : '0',
-    Seiketsu: '0',
-    Shitsuke: '0'
-  };
-
-  // aplicar sugerencias al formulario (selects)
-  document.querySelectorAll('#checklistForm .sel').forEach(sel => {
-    const key = sel.getAttribute('data-key');
-    if (suggestions[key] !== undefined) sel.value = suggestions[key];
+  (predictions || []).forEach(p => {
+    const cls = p.class.toLowerCase();
+    if (clutterSet.has(cls)) clutterCount++;
+    if (['box','suitcase','backpack','handbag','book','laptop','microwave'].includes(cls)) toolLikeCount++;
+    if (cls === 'person') personCount++;
   });
+
+  // incorporar derrame: si spill.spillScore alto reduce Seiso y Seiri
+  const spillScore = spill.spillScore || 0; // 0..100
+
+  let Seiri = 0;
+  if (clutterCount <= 1 && spillScore < 25) Seiri = 100;
+  else if (clutterCount <= 2 && spillScore < 35) Seiri = 75;
+  else if (clutterCount <= 4 && spillScore < 50) Seiri = 50;
+  else Seiri = 20;
+
+  let Seiton = 0;
+  if (toolLikeCount === 0 && spillScore < 30) Seiton = 100;
+  else if (toolLikeCount === 1 && spillScore < 40) Seiton = 75;
+  else if (toolLikeCount <= 3) Seiton = 50;
+  else Seiton = 20;
+
+  let Seiso = 0;
+  if (spillScore < 10 && clutterCount === 0) Seiso = 100;
+  else if (spillScore < 25 && clutterCount <= 1) Seiso = 80;
+  else if (spillScore < 50 && clutterCount <= 3) Seiso = 50;
+  else Seiso = 20;
+
+  let Seiketsu = 50; // no detectable por COCO -> conservador
+  let Shitsuke = 50;
+  if (personCount > 0 && clutterCount <= 1 && spillScore < 30) Shitsuke = Math.min(90, Shitsuke + 20);
+
+  return {
+    Seiri, Seiton, Seiso, Seiketsu, Shitsuke,
+    clutterCount, toolLikeCount, personCount, spillScore
+  };
 }
 
-/* --------------- Calcular puntaje --------------- */
-calcBtn.onclick = () => {
-  const selects = Array.from(document.querySelectorAll('#checklistForm .sel'));
-  const values = selects.map(s => parseInt(s.value, 10) || 0);
-  const sum = values.reduce((a,b) => a + b, 0);
-  const pct = Math.round((sum / values.length) * 100);
+/* ----------------- Mostrar resultado ----------------- */
+function showResult(inf, spill) {
+  const values = [inf.Seiri, inf.Seiton, inf.Seiso, inf.Seiketsu, inf.Shitsuke];
+  const sum = values.reduce((a,b) => a+b, 0);
+  const pct = Math.round(sum / values.length);
   const verdict = pct >= 75 ? 'ACEPTABLE' : 'NO ACEPTABLE';
-  // calcular faltantes
-  const keys = selects.map(s => s.getAttribute('data-key'));
-  const faltantes = keys.filter((k,i) => values[i] === 0).join(', ') || 'Ninguno';
 
-  // mostrar resultado
-  resultBox.innerHTML = `<strong>Resultado:</strong><br>Área: <em>${(areaInput.value||'No especificada')}</em><br>
-  Puntaje: <strong>${pct}%</strong><br>Veredicto: <strong>${verdict}</strong><br>
-  Faltantes: ${faltantes}<br><br><small>Nota: análisis foto heurístico + checklist manual.</small>`;
+  const areaText = areaInput.value || 'No especificada';
+  let html = `Área: ${escapeHtml(areaText)}\nPuntaje total: ${pct}% — ${verdict}\n\nDesglose 5S (0-100):\n` +
+    `Seiri: ${inf.Seiri}\nSeiton: ${inf.Seiton}\nSeiso: ${inf.Seiso}\nSeiketsu: ${inf.Seiketsu}\nShitsuke: ${inf.Shitsuke}\n\n` +
+    `Heurística: objetos detectados=${inf.clutterCount}, herramientas visibles=${inf.toolLikeCount}, personas=${inf.personCount}\n` +
+    `Derrame estimado: ${inf.spillScore}%  (área sucia estimada: ${(spill.maskPercent*100).toFixed(2)}%)\n\n` +
+    `Nota: análisis automático (COCO-SSD + heurística). Validar con inspección humana.`;
 
-  // activar botones
-  downloadBtn.disabled = false;
-  copyBtn.disabled = false;
-  tgBtn.disabled = false;
-};
+  resultBox.innerText = html;
+}
 
-/* --------------- Descargar foto --------------- */
+/* ----------------- Dibujar heatmap overlay escalado ----------------- */
+function drawHeatmapOverlay(heatCanvasSmall, imgW, imgH, imgElement) {
+  if (!heatCanvasSmall) {
+    heatOverlay.getContext('2d').clearRect(0,0,heatOverlay.width,heatOverlay.height);
+    return;
+  }
+  // escalar heatCanvasSmall (small) a tamaño de preview natural y dibujar
+  const hctx = heatOverlay.getContext('2d');
+  hctx.clearRect(0,0,heatOverlay.width,heatOverlay.height);
+  // usar drawImage para escalar
+  hctx.drawImage(heatCanvasSmall, 0, 0, heatOverlay.width, heatOverlay.height);
+}
+
+/* ----------------- Descargar foto ----------------- */
 downloadBtn.onclick = () => {
   if (!lastImageDataUrl) return alert('No hay foto para descargar.');
   const a = document.createElement('a');
@@ -156,38 +187,120 @@ downloadBtn.onclick = () => {
   a.click();
 };
 
-/* --------------- Copiar informe --------------- */
+/* ----------------- Copiar informe ----------------- */
 copyBtn.onclick = () => {
+  if (!lastImageDataUrl) return alert('No hay informe para copiar.');
   const txt = buildReportText();
   navigator.clipboard.writeText(txt).then(() => {
-    alert('Informe copiado al portapapeles. Pégalo en Telegram o en tu registro.');
+    alert('Informe copiado al portapapeles.');
   });
 };
 
-/* --------------- Abrir Telegram con texto (compartir) --------------- */
+/* ----------------- Compartir en Telegram (texto) ----------------- */
 tgBtn.onclick = () => {
+  if (!lastImageDataUrl) return alert('No hay foto para compartir.');
   const txt = encodeURIComponent(buildReportText());
-  // Telegram share URL: abre la app web/desktop/mobile para compartir texto
   const url = `https://t.me/share/url?url=&text=${txt}`;
   window.open(url,'_blank');
 };
 
 function buildReportText() {
-  const selects = Array.from(document.querySelectorAll('#checklistForm .sel'));
-  const keys = selects.map(s => s.getAttribute('data-key'));
-  const values = selects.map(s => parseInt(s.value,10) || 0);
-  const sum = values.reduce((a,b) => a+b, 0);
-  const pct = Math.round((sum / values.length) * 100);
-  const verdict = pct >= 75 ? 'ACEPTABLE' : 'NO ACEPTABLE';
-  const faltantes = keys.filter((k,i) => values[i] === 0).join(', ') || 'Ninguno';
-
-  const txt = `[5S] Área: ${areaInput.value || 'No especificada'}\nPuntaje: ${pct}%\nVeredicto: ${verdict}\nFaltantes: ${faltantes}\nObservaciones: (agrega aquí comentarios)\n*Foto:* guarda la imagen y adjuntala si la compartes.`;
-  return txt;
+  return resultBox.innerText + '\n\nFoto: guarda la imagen y adjúntala si la envías.';
 }
 
-/* --------------- Manejar parámetro ?area= en URL (opcional) --------------- */
-(function prefillAreaFromUrl(){
-  const params = new URLSearchParams(window.location.search);
-  const area = params.get('area');
-  if (area) areaInput.value = decodeURIComponent(area);
-})();
+/* ----------------- util ----------------- */
+function escapeHtml(s){ if(!s) return ''; return s.replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]); }
+
+/* ----------------- Heurística: detectar derrames (js) ----------------- */
+/* Devuelve {spillScore:0..100, heatmapCanvas:HTMLCanvasElement, maskPercent} */
+async function detectSpillHeuristic(img, options = {}) {
+  const cfg = Object.assign({
+    downscale: 0.25,
+    brightThreshold: 220,
+    darkThreshold: 60,
+    saturationThreshold: 20,
+    windowSize: 6,
+    maskPixelThreshold: 0.08
+  }, options);
+
+  const c = document.createElement('canvas');
+  const w = Math.max(64, Math.floor(img.width * cfg.downscale));
+  const h = Math.max(48, Math.floor(img.height * cfg.downscale));
+  c.width = w; c.height = h;
+  const ctx = c.getContext('2d');
+  ctx.drawImage(img, 0, 0, w, h);
+  const data = ctx.getImageData(0,0,w,h).data;
+
+  function rgb2hsv(r,g,b){
+    r/=255; g/=255; b/=255;
+    const mx=Math.max(r,g,b), mn=Math.min(r,g,b);
+    let h=0,s=0,v=mx;
+    const d=mx-mn;
+    s = mx===0 ? 0 : d/mx;
+    if(d!==0){
+      if(mx===r) h = (g-b)/d + (g<b?6:0);
+      else if(mx===g) h = (b-r)/d + 2;
+      else h = (r-g)/d + 4;
+      h /= 6;
+    }
+    return [h*360, s*100, v*255];
+  }
+
+  const gray = new Uint8ClampedArray(w*h);
+  for(let i=0;i<w*h;i++){
+    const r = data[4*i], g=data[4*i+1], b=data[4*i+2];
+    gray[i] = Math.round(0.299*r + 0.587*g + 0.114*b);
+  }
+
+  function localVarianceAt(x,y,ws){
+    let sum=0, sum2=0, n=0;
+    const ymin = Math.max(0, y-ws), ymax = Math.min(h-1, y+ws);
+    const xmin = Math.max(0, x-ws), xmax = Math.min(w-1, x+ws);
+    for(let yy=ymin; yy<=ymax; yy++){
+      for(let xx=xmin; xx<=xmax; xx++){
+        const v = gray[yy*w + xx];
+        sum += v; sum2 += v*v; n++;
+      }
+    }
+    const mean = sum/n;
+    return (sum2/n) - (mean*mean);
+  }
+
+  const mask = new Uint8Array(w*h);
+  let maskCount = 0;
+  for(let y=0;y<h;y++){
+    for(let x=0;x<w;x++){
+      const i = y*w + x;
+      const r = data[4*i], g = data[4*i+1], b = data[4*i+2];
+      const [hue, sat, val] = rgb2hsv(r,g,b);
+      const variance = localVarianceAt(x,y, Math.max(1, Math.floor(cfg.windowSize/2)));
+      const isDark = val < cfg.darkThreshold;
+      const isBright = val > cfg.brightThreshold;
+      const lowTexture = variance < 400;
+      const likelyLiquidColor = (hue >= 20 && hue <= 70 && sat>cfg.saturationThreshold) || (hue >= 180 && hue <= 260 && sat>cfg.saturationThreshold);
+      const suspect = ( (isDark || isBright) && lowTexture ) || likelyLiquidColor;
+      if(suspect){ mask[i]=1; maskCount++; }
+    }
+  }
+
+  const maskPercent = maskCount / (w*h);
+  const spillScore = Math.round(Math.min(100, maskPercent * 1000));
+
+  const heat = document.createElement('canvas');
+  heat.width = w; heat.height = h;
+  const hctx = heat.getContext('2d');
+  const heatImg = hctx.createImageData(w,h);
+  for(let i=0;i<w*h;i++){
+    if(mask[i]){
+      heatImg.data[4*i] = 255;
+      heatImg.data[4*i+1] = 40;
+      heatImg.data[4*i+2] = 40;
+      heatImg.data[4*i+3] = 160;
+    } else {
+      heatImg.data[4*i+3] = 0;
+    }
+  }
+  hctx.putImageData(heatImg,0,0);
+
+  return { spillScore, maskPercent, heatmapCanvas: heat, smallCanvas: c };
+}

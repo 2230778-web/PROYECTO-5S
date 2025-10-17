@@ -3,16 +3,16 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>5S Camera Checker — Demo</title>
+  <title>5S Auto + Detección de Derrames</title>
   <link rel="stylesheet" href="styles.css" />
-  <!-- TensorFlow + COCO-SSD (se cargan desde CDN) -->
+  <!-- TensorFlow + COCO-SSD -->
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.20.0/dist/tf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
 </head>
 <body>
   <header>
-    <h1>5S Camera Checker</h1>
-    <p>Escanea, toma foto y obtén un veredicto 5S (heurístico, gratuito).</p>
+    <h1>5S Auto Checker + Detección de Derrames</h1>
+    <p>Captura foto — análisis automático (heurístico + COCO-SSD). Deploy en Vercel.</p>
   </header>
 
   <main>
@@ -29,44 +29,33 @@
         <div class="buttons">
           <button id="startBtn">Abrir cámara</button>
           <button id="captureBtn" disabled>Capturar foto</button>
-          <button id="analyzeBtn" disabled>Analizar</button>
         </div>
+        <div id="status" class="status">Cargando modelo...</div>
       </div>
     </section>
 
     <section class="preview-area">
       <h2>Previsualización</h2>
-      <img id="photoPreview" alt="preview" />
+      <div class="preview-wrapper">
+        <img id="photoPreview" alt="preview" />
+        <canvas id="heatOverlay" class="heatOverlay"></canvas>
+      </div>
       <div id="detections"></div>
     </section>
 
-    <section class="checklist-area">
-      <h2>Checklist 5S (sugerido)</h2>
-      <form id="checklistForm">
-        <div class="q"><label>1. Seiri (clasificar - ¿no hay materiales innecesarios?)</label>
-          <select data-key="Seiri" class="sel"><option value="1">Sí</option><option value="0">No</option></select></div>
-        <div class="q"><label>2. Seiton (orden - ¿herramientas ordenadas y señalizadas?)</label>
-          <select data-key="Seiton" class="sel"><option value="1">Sí</option><option value="0">No</option></select></div>
-        <div class="q"><label>3. Seiso (limpieza - ¿zona limpia, sin derrames?)</label>
-          <select data-key="Seiso" class="sel"><option value="1">Sí</option><option value="0">No</option></select></div>
-        <div class="q"><label>4. Seiketsu (estandarizar - ¿estándares visibles?)</label>
-          <select data-key="Seiketsu" class="sel"><option value="1">Sí</option><option value="0">No</option></select></div>
-        <div class="q"><label>5. Shitsuke (disciplina - ¿evidencia de cumplimiento?)</label>
-          <select data-key="Shitsuke" class="sel"><option value="1">Sí</option><option value="0">No</option></select></div>
-      </form>
+    <section class="result-area">
+      <h2>Resultado automático 5S + Derrames</h2>
+      <div id="resultBox" class="resultBox">Sin foto aún.</div>
 
       <div class="result-controls">
-        <button id="calcBtn">Calcular veredicto</button>
         <button id="downloadBtn" disabled>Descargar foto</button>
         <button id="copyBtn" disabled>Copiar informe</button>
         <button id="tgBtn" disabled>Abrir Telegram (compartir texto)</button>
       </div>
-
-      <div id="resultBox" class="resultBox"></div>
     </section>
 
     <footer>
-      <small>Demo gratuito — detección en el navegador con TensorFlow.js (COCO-SSD). Limitaciones: heurístico.</small>
+      <small>Demo gratuito — detección en el navegador (heurística + COCO-SSD). Validar con inspección humana.</small>
     </footer>
   </main>
 
