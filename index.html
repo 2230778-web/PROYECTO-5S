@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>5S Camera Checker — Demo</title>
+  <link rel="stylesheet" href="styles.css" />
+  <!-- TensorFlow + COCO-SSD (se cargan desde CDN) -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.20.0/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+</head>
+<body>
+  <header>
+    <h1>5S Camera Checker</h1>
+    <p>Escanea, toma foto y obtén un veredicto 5S (heurístico, gratuito).</p>
+  </header>
+
+  <main>
+    <section class="cam-area">
+      <div class="video-wrap">
+        <video id="video" autoplay playsinline></video>
+        <canvas id="canvas" style="display:none"></canvas>
+      </div>
+
+      <div class="controls">
+        <label>Área / Ubicación:
+          <input id="areaInput" type="text" placeholder="Ej: Línea 1 - Montacargas" />
+        </label>
+        <div class="buttons">
+          <button id="startBtn">Abrir cámara</button>
+          <button id="captureBtn" disabled>Capturar foto</button>
+          <button id="analyzeBtn" disabled>Analizar</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="preview-area">
+      <h2>Previsualización</h2>
+      <img id="photoPreview" alt="preview" />
+      <div id="detections"></div>
+    </section>
+
+    <section class="checklist-area">
+      <h2>Checklist 5S (sugerido)</h2>
+      <form id="checklistForm">
+        <div class="q"><label>1. Seiri (clasificar - ¿no hay materiales innecesarios?)</label>
+          <select data-key="Seiri" class="sel"><option value="1">Sí</option><option value="0">No</option></select></div>
+        <div class="q"><label>2. Seiton (orden - ¿herramientas ordenadas y señalizadas?)</label>
+          <select data-key="Seiton" class="sel"><option value="1">Sí</option><option value="0">No</option></select></div>
+        <div class="q"><label>3. Seiso (limpieza - ¿zona limpia, sin derrames?)</label>
+          <select data-key="Seiso" class="sel"><option value="1">Sí</option><option value="0">No</option></select></div>
+        <div class="q"><label>4. Seiketsu (estandarizar - ¿estándares visibles?)</label>
+          <select data-key="Seiketsu" class="sel"><option value="1">Sí</option><option value="0">No</option></select></div>
+        <div class="q"><label>5. Shitsuke (disciplina - ¿evidencia de cumplimiento?)</label>
+          <select data-key="Shitsuke" class="sel"><option value="1">Sí</option><option value="0">No</option></select></div>
+      </form>
+
+      <div class="result-controls">
+        <button id="calcBtn">Calcular veredicto</button>
+        <button id="downloadBtn" disabled>Descargar foto</button>
+        <button id="copyBtn" disabled>Copiar informe</button>
+        <button id="tgBtn" disabled>Abrir Telegram (compartir texto)</button>
+      </div>
+
+      <div id="resultBox" class="resultBox"></div>
+    </section>
+
+    <footer>
+      <small>Demo gratuito — detección en el navegador con TensorFlow.js (COCO-SSD). Limitaciones: heurístico.</small>
+    </footer>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
