@@ -1,64 +1,91 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>5S Auto + Detección de Derrames</title>
-  <link rel="stylesheet" href="styles.css" />
-  <!-- TensorFlow + COCO-SSD -->
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.20.0/dist/tf.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>5S Smart Cam</title>
+
+  <!-- Estilos globales -->
+  <link rel="stylesheet" href="CSS/styles.css" />
 </head>
-<body>
-  <header>
-    <h1>5S Auto Checker + Detección de Derrames</h1>
-   
+<body class="page">
+
+  <!-- ===== HERO / ENCABEZADO ===== -->
+  <header class="hero">
+    <div class="container hero-content">
+      <h1>5S Smart Cam</h1>
+      <p>
+        Toma una foto de tu área de trabajo y recibe sugerencias basadas en la
+        metodología 5S: Clasificar, Ordenar, Limpiar, Estandarizar y Disciplina.
+      </p>
+
+      <div class="hero-actions">
+        <button id="btnStart" class="btn btn-primary">
+          Activar cámara
+        </button>
+        <button id="btnCapture" class="btn btn-secondary" disabled>
+          Tomar foto
+        </button>
+        <button id="btnAnalyze" class="btn" disabled>
+          Analizar con 5S
+        </button>
+      </div>
+
+      <p class="hero-note">
+        💡 Consejo: funciona mejor si apuntas la cámara a un área de trabajo con
+        herramientas, papeles, materiales, etc.
+      </p>
+    </div>
   </header>
 
-  <main>
-    <section class="cam-area">
-      <div class="video-wrap">
+  <!-- ===== CONTENIDO PRINCIPAL ===== -->
+  <main class="container main-grid">
+
+    <!-- Columna 1: Cámara -->
+    <section class="card">
+      <h2>Vista de la cámara</h2>
+
+      <div class="camera-wrapper">
         <video id="video" autoplay playsinline></video>
-        <canvas id="canvas" style="display:none"></canvas>
+        <canvas id="canvas" class="hidden"></canvas>
       </div>
 
-      <div class="controls">
-        <label>Área / Ubicación:
-          <input id="areaInput" type="text" placeholder="Ej: Línea 1 - Montacargas" />
-        </label>
-        <div class="buttons">
-          <button id="startBtn">Abrir cámara</button>
-          <button id="captureBtn" disabled>Capturar foto</button>
-        </div>
-        <div id="status" class="status">Cargando modelo...</div>
+      <p class="helper-text">
+        Cuando el navegador lo pida, permite el acceso a la cámara.
+      </p>
+    </section>
+
+    <!-- Columna 2: Resultado 5S -->
+    <section class="card">
+      <h2>Recomendación 5S</h2>
+
+      <div id="result" class="result-box">
+        <p>
+          Toma una foto y después haz clic en <strong>“Analizar con 5S”</strong>
+          para ver una sugerencia de mejora.
+        </p>
+      </div>
+
+      <div class="pill-grid">
+        <span class="pill">Seiri – Clasificar</span>
+        <span class="pill">Seiton – Ordenar</span>
+        <span class="pill">Seiso – Limpiar</span>
+        <span class="pill">Seiketsu – Estandarizar</span>
+        <span class="pill">Shitsuke – Disciplina</span>
       </div>
     </section>
 
-    <section class="preview-area">
-      <h2>Previsualización</h2>
-      <div class="preview-wrapper">
-        <img id="photoPreview" alt="preview" />
-        <canvas id="heatOverlay" class="heatOverlay"></canvas>
-      </div>
-      <div id="detections"></div>
-    </section>
-
-    <section class="result-area">
-      <h2>Resultado automático 5S + Derrames</h2>
-      <div id="resultBox" class="resultBox">Sin foto aún.</div>
-
-      <div class="result-controls">
-        <button id="downloadBtn" disabled>Descargar foto</button>
-        <button id="copyBtn" disabled>Copiar informe</button>
-        <button id="tgBtn" disabled>Abrir Telegram (compartir texto)</button>
-      </div>
-    </section>
-
-    <footer>
-    
-    </footer>
   </main>
 
-  <script src="script.js"></script>
+  <!-- ===== FOOTER ===== -->
+  <footer class="footer">
+    <div class="container footer-content">
+      <p>Proyecto 5S Smart Cam · Demostración educativa</p>
+      <p>Desplegado con GitHub + Vercel</p>
+    </div>
+  </footer>
+
+  <!-- Lógica de cámara y análisis 5S -->
+  <script src="JS/camera.js"></script>
 </body>
 </html>
