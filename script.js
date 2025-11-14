@@ -1,169 +1,187 @@
-// JS/camera.js
+const state = {
+    stream: null,
+    isAnalyzing: false,
+    currentImage: null,
+};
 
-const video = document.getElementById("video");
-const canvas = document.getElementById("canvas");
-const btnStart = document.getElementById("btnStart");
-const btnCapture = document.getElementById("btnCapture");
-const btnAnalyze = document.getElementById("btnAnalyze");
-const resultBox = document.getElementById("result");
+// DOM Elements
+const videoFeed = document.getElementById('videoFeed');
+const canvas = document.getElementById('canvas');
+const cameraBtn = document.getElementById('cameraBtn');
+const captureBtn = document.getElementById('captureBtn');
+const stopCameraBtn = document.getElementById('stopCameraBtn');
+const fileInput = document.getElementById('fileInput');
+const cameraSection = document.getElementById('cameraSection');
+const resultsSection = document.getElementById('resultsSection');
+const resultsContainer = document.getElementById('resultsContainer');
+const newAnalysisBtn = document.getElementById('newAnalysisBtn');
+const errorMessage = document.getElementById('errorMessage');
+const loadingSpinner = document.getElementById('loadingSpinner');
+const fileLabel = document.querySelector('.file-label');
 
-let currentStream = null;
-let photoTaken = false;
-
-// ===== 1. Activar cámara =====
-btnStart.addEventListener("click", async () => {
-  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    resultBox.innerHTML = `
-      <p>No se pudo acceder a la cámara. Tu navegador no soporta getUserMedia.</p>
-    `;
-    return;
-  }
-
-  try {
-    // Si ya había un stream, detenerlo
-    if (currentStream) {
-      currentStream.getTracks().forEach((t) => t.stop());
+// Camera Functions
+async function startCamera() {
+    try {
+        errorMessage.style.display = 'none';
+        state.stream = await navigator.mediaDevices.getUserMedia({ 
+            video: { facingMode: 'environment' } 
+        });
+        videoFeed.srcObject = state.stream;
+        videoFeed.style.display = 'block';
+        
+        cameraBtn.style.display = 'none';
+        captureBtn.style.display = 'inline-flex';
+        stopCameraBtn.style.display = 'inline-flex';
+        fileLabel.style.display = 'none';
+    } catch (error) {
+        showError('No se pudo acceder a la cámara. Verifica los permisos.');
+        console.error('Camera error:', error);
     }
-
-    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-    video.srcObject = stream;
-    currentStream = stream;
-
-    btnCapture.disabled = false;
-    btnAnalyze.disabled = true;
-    photoTaken = false;
-    canvas.classList.add("hidden");
-    resultBox.innerHTML = `
-      <p>Cámara activada. Coloca el área de trabajo en el cuadro y presiona
-      <strong>“Tomar foto”</strong>.</p>
-    `;
-  } catch (error) {
-    console.error(error);
-    resultBox.innerHTML = `
-      <p>No se pudo acceder a la cámara. Revisa permisos del navegador
-      o intenta con otro dispositivo.</p>
-    `;
-  }
-});
-
-// ===== 2. Tomar foto =====
-btnCapture.addEventListener("click", () => {
-  if (!video.videoWidth || !video.videoHeight) return;
-
-  const width = video.videoWidth;
-  const height = video.videoHeight;
-
-  canvas.width = width;
-  canvas.height = height;
-
-  const ctx = canvas.getContext("2d");
-  ctx.drawImage(video, 0, 0, width, height);
-
-  canvas.classList.remove("hidden");
-  photoTaken = true;
-  btnAnalyze.disabled = false;
-
-  resultBox.innerHTML = `
-    <p>Foto capturada. Ahora haz clic en <strong>“Analizar con 5S”</strong>.</p>
-  `;
-});
-
-// ===== 3. Analizar la imagen según 5S =====
-btnAnalyze.addEventListener("click", () => {
-  if (!photoTaken) return;
-
-  const suggestion = analyzeImageWith5S(canvas);
-
-  resultBox.innerHTML = `
-    <h3>${suggestion.title}</h3>
-    <p>${suggestion.text}</p>
-    ${suggestion.actions?.length
-      ? `<ul>${suggestion.actions
-          .map((a) => `<li>${a}</li>`)
-          .join("")}</ul>`
-      : ""}
-  `;
-});
-
-// Heurística súper simple basada en brillo y variación
-function analyzeImageWith5S(canvas) {
-  const ctx = canvas.getContext("2d");
-  const { width, height } = canvas;
-
-  const imgData = ctx.getImageData(0, 0, width, height).data;
-
-  let total = 0;
-  let totalSq = 0;
-  let darkCount = 0;
-  let brightCount = 0;
-  let count = 0;
-
-  const step = 4 * 20; // muestrea cada 20 píxeles aprox para no hacerlo tan pesado
-
-  for (let i = 0; i < imgData.length; i += step) {
-    const r = imgData[i];
-    const g = imgData[i + 1];
-    const b = imgData[i + 2];
-
-    const gray = 0.299 * r + 0.587 * g + 0.114 * b;
-
-    total += gray;
-    totalSq += gray * gray;
-    count++;
-
-    if (gray < 70) darkCount++;
-    if (gray > 200) brightCount++;
-  }
-
-  if (count === 0) {
-    return {
-      title: "No se pudo analizar la imagen",
-      text: "Intenta tomar otra foto con mejor iluminación.",
-      actions: [],
-    };
-  }
-
-  const mean = total / count;
-  const variance = totalSq / count - mean * mean;
-
-  // Reglas MUY simples para demo
-  // Mucha variación + zonas brillantes => área "caótica" (muchos objetos)
-  if (variance > 2500 && brightCount > count * 0.25) {
-    return {
-      title: "Enfócate en SEIRI (Clasificar) y SEITON (Ordenar)",
-      text:
-        "La imagen parece tener muchos elementos y bastante contraste, lo que suele indicar objetos mezclados o poco definidos.",
-      actions: [
-        "Separa lo necesario de lo innecesario (tira, archiva o reubica lo que no se use).",
-        "Agrupa por categoría: herramientas juntas, papeles juntos, EPP juntos, etc.",
-        "Define ubicaciones fijas (cajas, estantes, sombras) para cada tipo de objeto.",
-      ],
-    };
-  }
-
-  // Muy oscuro => suciedad, mala iluminación o elementos acumulados
-  if (mean < 90 || darkCount > count * 0.5) {
-    return {
-      title: "Refuerza SEISO (Limpiar) y SEIKETSU (Estandarizar)",
-      text:
-        "La foto parece bastante oscura o con zonas poco definidas. Puede haber suciedad, polvo o acumulación en el área.",
-      actions: [
-        "Programa una limpieza profunda del área (pisos, mesas, estantes, equipos).",
-        "Coloca estándares visuales: checklists de limpieza, frecuencia y responsables.",
-        "Mejora la iluminación del área para identificar suciedad rápidamente.",
-      ],
-    };
-  }
-
-  // Caso “medio”: área relativamente homogénea
-  return {
-    title: "Mantén SHITSUKE (Disciplina) y mejora pequeños detalles",
-    text:
-      "El área no parece extremadamente saturada ni muy oscura. Puedes trabajar en refinar y sostener los estándares.",
-    actions: [
-      "Revisa etiquetas, señalización y contornos de objetos: ¿siguen claros y visibles?",
-      "Haz auditorías 5S rápidas (5–10 minutos) con el equipo al inicio o fin del turno.",
-      "Refuerza hábitos: cada cosa vuelve a su lugar antes de terminar la jornada.",
-    ],
-  };
 }
+
+function stopCamera() {
+    if (state.stream) {
+        state.stream.getTracks().forEach(track => track.stop());
+        state.stream = null;
+    }
+    videoFeed.style.display = 'none';
+    cameraBtn.style.display = 'inline-flex';
+    captureBtn.style.display = 'none';
+    stopCameraBtn.style.display = 'none';
+    fileLabel.style.display = 'flex';
+}
+
+function capturePhoto() {
+    const context = canvas.getContext('2d');
+    canvas.width = videoFeed.videoWidth;
+    canvas.height = videoFeed.videoHeight;
+    context.drawImage(videoFeed, 0, 0);
+    
+    const imageData = canvas.toDataURL('image/jpeg', 0.8);
+    state.currentImage = imageData;
+    stopCamera();
+    analyzeImage(imageData);
+}
+
+// File Upload
+fileLabel.addEventListener('click', () => fileInput.click());
+
+fileInput.addEventListener('change', (event) => {
+    const file = event.target.files?.[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            state.currentImage = e.target?.result;
+            analyzeImage(state.currentImage);
+        };
+        reader.readAsDataURL(file);
+    }
+});
+
+// Analysis Function
+async function analyzeImage(imageData) {
+    state.isAnalyzing = true;
+    errorMessage.style.display = 'none';
+    loadingSpinner.style.display = 'flex';
+    
+    try {
+        // Call your backend API
+        const response = await fetch('/api/analyze', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ image: imageData }),
+        });
+
+        if (!response.ok) {
+            throw new Error('Error al analizar la imagen');
+        }
+
+        const results = await response.json();
+        displayResults(results);
+    } catch (error) {
+        showError(error instanceof Error ? error.message : 'Error al analizar');
+        console.error('Analysis error:', error);
+    } finally {
+        state.isAnalyzing = false;
+        loadingSpinner.style.display = 'none';
+    }
+}
+
+// Display Results
+function displayResults(results) {
+    let html = '<div class="results-container">';
+    
+    const fiveS = [
+        { name: 'Seiri (Clasificación)', key: 'seiri', emoji: '📋' },
+        { name: 'Seiton (Organización)', key: 'seiton', emoji: '📦' },
+        { name: 'Seiso (Limpieza)', key: 'seiso', emoji: '✨' },
+        { name: 'Seiketsu (Estandarización)', key: 'seiketsu', emoji: '📐' },
+        { name: 'Shitsuke (Disciplina)', key: 'shitsuke', emoji: '🎯' },
+    ];
+
+    fiveS.forEach(s => {
+        const data = results[s.key] || {};
+        const score = data.score || 0;
+        const recommendations = data.recommendations || [];
+
+        html += `
+            <div class="score-card">
+                <div class="score-header">
+                    <div>
+                        <div class="score-title">${s.emoji} ${s.name}</div>
+                        <div class="score-label">${data.description || ''}</div>
+                    </div>
+                    <div class="score-value">${score}%</div>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: ${score}%"></div>
+                </div>
+                <div class="recommendations">
+        `;
+
+        recommendations.forEach(rec => {
+            const priorityClass = rec.priority?.toLowerCase() || 'low';
+            const priorityText = rec.priority || 'Normal';
+            html += `
+                <div class="recommendation-item">
+                    <div>
+                        <span class="priority-badge priority-${priorityClass}">${priorityText}</span>
+                        <p>${rec.text}</p>
+                    </div>
+                </div>
+            `;
+        });
+
+        html += `
+                </div>
+            </div>
+        `;
+    });
+
+    html += '</div>';
+    resultsContainer.innerHTML = html;
+    cameraSection.style.display = 'none';
+    resultsSection.style.display = 'block';
+}
+
+// Show Error
+function showError(message) {
+    errorMessage.textContent = message;
+    errorMessage.style.display = 'block';
+}
+
+// New Analysis
+newAnalysisBtn.addEventListener('click', () => {
+    state.currentImage = null;
+    resultsContainer.innerHTML = '';
+    resultsSection.style.display = 'none';
+    cameraSection.style.display = 'block';
+    fileInput.value = '';
+});
+
+// Event Listeners
+cameraBtn.addEventListener('click', startCamera);
+captureBtn.addEventListener('click', capturePhoto);
+stopCameraBtn.addEventListener('click', stopCamera);

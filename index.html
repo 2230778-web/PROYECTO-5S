@@ -1,91 +1,75 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>5S Smart Cam</title>
-
-  <!-- Estilos globales -->
-  <link rel="stylesheet" href="CSS/styles.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#3b82f6">
+    <title>5S Space Analyzer - Análisis de Espacios</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
-<body class="page">
+<body>
+    <main class="min-h-screen bg-gradient">
+        <div class="container">
+            <!-- Header -->
+            <div class="header-section">
+                <h1 class="title">5S Space Analyzer</h1>
+                <p class="subtitle">Captura una foto de tu espacio y obtén recomendaciones inteligentes basadas en la metodología 5S para optimizar y mejorar tu área de trabajo</p>
+            </div>
 
-  <!-- ===== HERO / ENCABEZADO ===== -->
-  <header class="hero">
-    <div class="container hero-content">
-      <h1>5S Smart Cam</h1>
-      <p>
-        Toma una foto de tu área de trabajo y recibe sugerencias basadas en la
-        metodología 5S: Clasificar, Ordenar, Limpiar, Estandarizar y Disciplina.
-      </p>
+            <!-- Main Content -->
+            <div class="main-content">
+                <div id="cameraSection" class="section">
+                    <div class="camera-container">
+                        <video id="videoFeed" class="video-feed" playsinline></video>
+                        <canvas id="canvas" style="display: none;"></canvas>
+                    </div>
+                    
+                    <div class="button-group">
+                        <button id="cameraBtn" class="btn btn-primary">
+                            <span class="btn-icon">📷</span>
+                            Abrir Cámara
+                        </button>
+                        <button id="captureBtn" class="btn btn-success" style="display: none;">
+                            <span class="btn-icon">✓</span>
+                            Capturar Foto
+                        </button>
+                        <button id="stopCameraBtn" class="btn btn-secondary" style="display: none;">
+                            <span class="btn-icon">✕</span>
+                            Cerrar Cámara
+                        </button>
+                    </div>
 
-      <div class="hero-actions">
-        <button id="btnStart" class="btn btn-primary">
-          Activar cámara
-        </button>
-        <button id="btnCapture" class="btn btn-secondary" disabled>
-          Tomar foto
-        </button>
-        <button id="btnAnalyze" class="btn" disabled>
-          Analizar con 5S
-        </button>
-      </div>
+                    <div class="upload-section">
+                        <label for="fileInput" class="file-label">
+                            <span class="file-icon">📁</span>
+                            Subir Imagen
+                        </label>
+                        <input type="file" id="fileInput" accept="image/*" style="display: none;">
+                    </div>
 
-      <p class="hero-note">
-        💡 Consejo: funciona mejor si apuntas la cámara a un área de trabajo con
-        herramientas, papeles, materiales, etc.
-      </p>
-    </div>
-  </header>
+                    <div id="errorMessage" class="error-message" style="display: none;"></div>
+                    <div id="loadingSpinner" class="loading-spinner" style="display: none;">
+                        <div class="spinner"></div>
+                        <p>Analizando tu espacio con IA...</p>
+                    </div>
+                </div>
 
-  <!-- ===== CONTENIDO PRINCIPAL ===== -->
-  <main class="container main-grid">
+                <!-- Results Section -->
+                <div id="resultsSection" class="section" style="display: none;">
+                    <div id="resultsContainer"></div>
+                    <button id="newAnalysisBtn" class="btn btn-primary btn-full">
+                        Analizar otro espacio
+                    </button>
+                </div>
+            </div>
 
-    <!-- Columna 1: Cámara -->
-    <section class="card">
-      <h2>Vista de la cámara</h2>
+            <!-- Footer -->
+            <footer class="footer">
+                <p>Impulsado por IA | Metodología 5S para optimización de espacios</p>
+            </footer>
+        </div>
+    </main>
 
-      <div class="camera-wrapper">
-        <video id="video" autoplay playsinline></video>
-        <canvas id="canvas" class="hidden"></canvas>
-      </div>
-
-      <p class="helper-text">
-        Cuando el navegador lo pida, permite el acceso a la cámara.
-      </p>
-    </section>
-
-    <!-- Columna 2: Resultado 5S -->
-    <section class="card">
-      <h2>Recomendación 5S</h2>
-
-      <div id="result" class="result-box">
-        <p>
-          Toma una foto y después haz clic en <strong>“Analizar con 5S”</strong>
-          para ver una sugerencia de mejora.
-        </p>
-      </div>
-
-      <div class="pill-grid">
-        <span class="pill">Seiri – Clasificar</span>
-        <span class="pill">Seiton – Ordenar</span>
-        <span class="pill">Seiso – Limpiar</span>
-        <span class="pill">Seiketsu – Estandarizar</span>
-        <span class="pill">Shitsuke – Disciplina</span>
-      </div>
-    </section>
-
-  </main>
-
-  <!-- ===== FOOTER ===== -->
-  <footer class="footer">
-    <div class="container footer-content">
-      <p>Proyecto 5S Smart Cam · Demostración educativa</p>
-      <p>Desplegado con GitHub + Vercel</p>
-    </div>
-  </footer>
-
-  <!-- Lógica de cámara y análisis 5S -->
-  <script src="JS/camera.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>
