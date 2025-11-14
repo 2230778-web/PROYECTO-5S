@@ -1,0 +1,330 @@
+:root {
+  --yellow: #facc15;
+  --yellow-strong: #eab308;
+  --bg-dark: #020617;
+  --bg-card: #020617;
+  --text-main: #f9fafb;
+  --text-muted: #e5e7eb;
+  --border-soft: #4b5563;
+  --danger: #f97373;
+}
+
+/* ===== Reset básico ===== */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  height: 100%;
+  scroll-behavior: smooth;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+}
+
+/* ===== Layout general ===== */
+.min-h-screen {
+  min-height: 100vh;
+}
+
+.bg-gradient {
+  background:
+    radial-gradient(1200px 600px at 80% -10%, rgba(250, 204, 21, 0.18), transparent 60%),
+    linear-gradient(to bottom, #000000, #020617);
+  color: var(--text-main);
+}
+
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* ===== Header ===== */
+.header-section {
+  text-align: center;
+  margin-bottom: 2rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 3px solid var(--yellow);
+  background-image: repeating-linear-gradient(
+    -45deg,
+    rgba(0, 0, 0, 0.2),
+    rgba(0, 0, 0, 0.2) 10px,
+    transparent 10px,
+    transparent 20px
+  );
+  border-radius: 0 0 1rem 1rem;
+}
+
+.title {
+  font-size: clamp(2rem, 3vw, 2.3rem);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--yellow);
+  margin-bottom: 0.75rem;
+}
+
+.subtitle {
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+/* ===== Contenido principal ===== */
+.main-content {
+  display: grid;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+/* 2 columnas en pantallas medianas+ */
+@media (min-width: 900px) {
+  .main-content {
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+    align-items: flex-start;
+  }
+}
+
+/* Secciones (cards) */
+.section {
+  background: var(--bg-card);
+  border-radius: 1.25rem;
+  padding: 1.4rem 1.5rem 1.6rem;
+  border: 1px solid var(--border-soft);
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.7);
+  position: relative;
+}
+
+/* Borde superior amarillo en cards */
+.section::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 1.25rem;
+  padding-top: 3px;
+  pointer-events: none;
+  background: linear-gradient(
+    to right,
+    var(--yellow),
+    transparent 40%,
+    transparent 60%,
+    var(--yellow)
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+}
+
+/* ===== Cámara / Imagen ===== */
+.camera-container {
+  width: 100%;
+  border-radius: 1rem;
+  overflow: hidden;
+  border: 2px solid var(--yellow);
+  background: #000;
+  margin-bottom: 1rem;
+  aspect-ratio: 4 / 3; /* Responsivo */
+}
+
+.video-feed {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+#canvas {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* ===== Botones ===== */
+.button-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.6rem 1.2rem;
+  font-size: 0.9rem;
+  border-radius: 999px;
+  border: 2px solid var(--yellow);
+  cursor: pointer;
+  background: transparent;
+  color: var(--yellow);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease,
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.btn-icon {
+  font-size: 1rem;
+}
+
+.btn-primary {
+  background: var(--yellow);
+  color: #000;
+}
+
+.btn-success {
+  background: #16a34a;
+  border-color: #16a34a;
+  color: #e5e7eb;
+}
+
+.btn-secondary {
+  background: #000;
+  color: var(--yellow);
+}
+
+.btn-full {
+  width: 100%;
+  margin-top: 1rem;
+}
+
+.btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+  box-shadow: none;
+}
+
+.btn:not(:disabled):hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.9);
+}
+
+.btn-primary:not(:disabled):hover {
+  background: var(--yellow-strong);
+}
+
+.btn-success:not(:disabled):hover {
+  background: #15803d;
+}
+
+/* ===== Upload imagen ===== */
+.upload-section {
+  margin-bottom: 0.75rem;
+}
+
+.file-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.6rem 1.1rem;
+  border-radius: 999px;
+  border: 1px dashed var(--yellow);
+  color: var(--yellow);
+  cursor: pointer;
+  font-size: 0.85rem;
+  background: rgba(250, 204, 21, 0.06);
+}
+
+.file-icon {
+  font-size: 1rem;
+}
+
+/* ===== Mensajes, loading, resultados ===== */
+.error-message {
+  margin-top: 0.6rem;
+  font-size: 0.8rem;
+  color: var(--danger);
+}
+
+.loading-spinner {
+  margin-top: 0.8rem;
+  display: none; /* se pasa a flex con JS */
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.spinner {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  border: 2px solid rgba(249, 250, 251, 0.2);
+  border-top-color: var(--yellow);
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+#resultsContainer {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+#resultsContainer h2 {
+  font-size: 1.1rem;
+  margin-bottom: 0.35rem;
+  color: var(--yellow);
+}
+
+#resultsContainer h3 {
+  font-size: 0.95rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.2rem;
+  color: var(--text-main);
+}
+
+#resultsContainer ul {
+  padding-left: 1.1rem;
+  margin-bottom: 0.3rem;
+}
+
+/* ===== Footer ===== */
+.footer {
+  margin-top: auto;
+  border-top: 2px solid var(--yellow);
+  padding-top: 0.9rem;
+  padding-bottom: 0.7rem;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+/* ===== Responsivo ===== */
+@media (max-width: 600px) {
+  .container {
+    padding-inline: 1rem;
+  }
+
+  .section {
+    padding-inline: 1.1rem;
+  }
+
+  .button-group {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .btn,
+  .file-label {
+    width: 100%;
+    justify-content: center;
+  }
+}

@@ -3,324 +3,79 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Analizador 5S - Análisis de Espacios</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-
-        .container {
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            max-width: 900px;
-            width: 100%;
-            padding: 40px;
-        }
-
-        h1 {
-            text-align: center;
-            color: #333;
-            margin-bottom: 30px;
-            font-size: 2.5em;
-        }
-
-        .controls {
-            display: flex;
-            gap: 15px;
-            justify-content: center;
-            margin-bottom: 30px;
-            flex-wrap: wrap;
-        }
-
-        button {
-            background: #667eea;
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 1em;
-            transition: all 0.3s;
-        }
-
-        button:hover {
-            background: #764ba2;
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-        }
-
-        #fileInput {
-            display: none;
-        }
-
-        #videoContainer, #imagePreview {
-            max-width: 100%;
-            margin: 20px 0;
-            border-radius: 10px;
-            display: none;
-        }
-
-        #videoContainer.active, #imagePreview.active {
-            display: block;
-        }
-
-        video, #imagePreview {
-            width: 100%;
-            max-height: 400px;
-            border-radius: 10px;
-        }
-
-        .results {
-            display: none;
-            margin-top: 40px;
-        }
-
-        .results.active {
-            display: block;
-        }
-
-        .overall-score {
-            text-align: center;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 30px;
-            border-radius: 10px;
-            margin-bottom: 30px;
-        }
-
-        .score-number {
-            font-size: 3em;
-            font-weight: bold;
-        }
-
-        .score-label {
-            font-size: 1.2em;
-            opacity: 0.9;
-        }
-
-        .pillar {
-            background: #f8f9fa;
-            border-left: 4px solid #667eea;
-            padding: 20px;
-            margin-bottom: 15px;
-            border-radius: 8px;
-        }
-
-        .pillar.seiri { border-left-color: #FF6B6B; }
-        .pillar.seiton { border-left-color: #4ECDC4; }
-        .pillar.seiso { border-left-color: #45B7D1; }
-        .pillar.seiketsu { border-left-color: #FFA07A; }
-        .pillar.shitsuke { border-left-color: #98D8C8; }
-
-        .pillar-title {
-            font-size: 1.3em;
-            font-weight: bold;
-            margin-bottom: 10px;
-            color: #333;
-        }
-
-        .pillar-score {
-            font-size: 1.8em;
-            font-weight: bold;
-            color: #667eea;
-            margin-bottom: 15px;
-        }
-
-        .pillar-recs {
-            list-style: none;
-        }
-
-        .pillar-recs li {
-            padding: 8px 0;
-            color: #555;
-            border-bottom: 1px solid #e0e0e0;
-        }
-
-        .pillar-recs li:last-child {
-            border-bottom: none;
-        }
-
-        .loading {
-            text-align: center;
-            color: #667eea;
-            font-size: 1.1em;
-            display: none;
-        }
-
-        .loading.active {
-            display: block;
-        }
-
-        .error {
-            background: #ff6b6b;
-            color: white;
-            padding: 15px;
-            border-radius: 8px;
-            margin-top: 20px;
-            display: none;
-        }
-
-        .error.active {
-            display: block;
-        }
-    </style>
+    <meta name="theme-color" content="#facc15">
+    <title>5S Space Analyzer - Análisis de Espacios</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div class="container">
-        <h1>Analizador 5S</h1>
-        
-        <div class="controls">
-            <button onclick="openCamera()">Abrir Cámara</button>
-            <button onclick="capturePhoto()">Capturar Foto</button>
-            <button onclick="document.getElementById('fileInput').click()">Subir Imagen</button>
-            <button onclick="stopCamera()">Detener Cámara</button>
-        </div>
-
-        <input type="file" id="fileInput" accept="image/*" onchange="handleFileUpload(event)">
-
-        <div id="videoContainer">
-            <video id="video" autoplay playsinline></video>
-        </div>
-
-        <canvas id="canvas" style="display: none;"></canvas>
-        <img id="imagePreview" alt="Imagen capturada">
-
-        <div class="loading" id="loading">
-            Analizando imagen con IA real... Por favor espera.
-        </div>
-
-        <div class="error" id="error"></div>
-
-        <div class="results" id="results">
-            <div class="overall-score">
-                <div class="score-label">Puntuación General 5S</div>
-                <div class="score-number" id="overallScore">75</div>
+    <main class="min-h-screen bg-gradient">
+        <div class="container">
+            <!-- Header -->
+            <div class="header-section">
+                <h1 class="title">5S Space Analyzer</h1>
+                <p class="subtitle">
+                    Captura una foto de tu espacio o sube una imagen y obtén recomendaciones inteligentes 
+                    basadas en la metodología 5S para optimizar y mejorar tu área de trabajo.
+                </p>
             </div>
 
-            <div id="pillarsContainer"></div>
-        </div>
-    </div>
-
-    <script>
-        let video = document.getElementById('video');
-        let canvas = document.getElementById('canvas');
-        let imagePreview = document.getElementById('imagePreview');
-
-        async function openCamera() {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: 'environment' } 
-                });
-                video.srcObject = stream;
-                document.getElementById('videoContainer').classList.add('active');
-                document.getElementById('imagePreview').classList.remove('active');
-            } catch (err) {
-                showError('No se puede acceder a la cámara: ' + err.message);
-            }
-        }
-
-        function capturePhoto() {
-            if (!video.srcObject) {
-                showError('Por favor abre la cámara primero');
-                return;
-            }
-            
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            canvas.getContext('2d').drawImage(video, 0, 0);
-            
-            const imageData = canvas.toDataURL('image/jpeg');
-            imagePreview.src = imageData;
-            imagePreview.classList.add('active');
-            
-            analyzeImage(imageData);
-        }
-
-        function handleFileUpload(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                imagePreview.src = e.target.result;
-                imagePreview.classList.add('active');
-                analyzeImage(e.target.result);
-            };
-            reader.readAsDataURL(file);
-        }
-
-        function stopCamera() {
-            if (video.srcObject) {
-                video.srcObject.getTracks().forEach(track => track.stop());
-                document.getElementById('videoContainer').classList.remove('active');
-            }
-        }
-
-        async function analyzeImage(imageData) {
-            document.getElementById('loading').classList.add('active');
-            document.getElementById('results').classList.remove('active');
-
-            try {
-                const response = await fetch('http://localhost:5000/api/analyze-5s', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ image: imageData })
-                });
-
-                if (!response.ok) throw new Error('Error en el servidor');
-
-                const analysis = await response.json();
-                displayResults(analysis);
-            } catch (err) {
-                showError('Error en el análisis: ' + err.message);
-            } finally {
-                document.getElementById('loading').classList.remove('active');
-            }
-        }
-
-        function displayResults(analysis) {
-            document.getElementById('overallScore').textContent = analysis.overall_score;
-
-            const pillars = ['seiri', 'seiton', 'seiso', 'seiketsu', 'shitsuke'];
-            const names = ['Seiri (Clasificación)', 'Seiton (Orden)', 'Seiso (Limpieza)', 'Seiketsu (Estandarización)', 'Shitsuke (Disciplina)'];
-
-            let html = '';
-            pillars.forEach((pillar, i) => {
-                const data = analysis[pillar];
-                html += `
-                    <div class="pillar ${pillar}">
-                        <div class="pillar-title">${names[i]}</div>
-                        <div class="pillar-score">${data.score}%</div>
-                        <ul class="pillar-recs">
-                            ${data.recommendations.map(rec => `<li>• ${rec}</li>`).join('')}
-                        </ul>
+            <!-- Main Content -->
+            <div class="main-content">
+                <!-- Sección cámara / carga de imagen -->
+                <div id="cameraSection" class="section">
+                    <div class="camera-container">
+                        <!-- playsinline para mejor soporte en móviles -->
+                        <video id="videoFeed" class="video-feed" playsinline autoplay muted></video>
+                        <canvas id="canvas" style="display: none;"></canvas>
                     </div>
-                `;
-            });
+                    
+                    <div class="button-group">
+                        <button id="cameraBtn" class="btn btn-primary">
+                            <span class="btn-icon">📷</span>
+                            Abrir Cámara
+                        </button>
+                        <button id="captureBtn" class="btn btn-success" style="display: none;">
+                            <span class="btn-icon">✓</span>
+                            Capturar Foto
+                        </button>
+                        <button id="stopCameraBtn" class="btn btn-secondary" style="display: none;">
+                            <span class="btn-icon">✕</span>
+                            Cerrar Cámara
+                        </button>
+                    </div>
 
-            document.getElementById('pillarsContainer').innerHTML = html;
-            document.getElementById('results').classList.add('active');
-        }
+                    <div class="upload-section">
+                        <label for="fileInput" class="file-label">
+                            <span class="file-icon">📁</span>
+                            Subir imagen desde galería
+                        </label>
+                        <input type="file" id="fileInput" accept="image/*" style="display: none;">
+                    </div>
 
-        function showError(message) {
-            const errorEl = document.getElementById('error');
-            errorEl.textContent = message;
-            errorEl.classList.add('active');
-            setTimeout(() => errorEl.classList.remove('active'), 5000);
-        }
-    </script>
+                    <div id="errorMessage" class="error-message" style="display: none;"></div>
+
+                    <div id="loadingSpinner" class="loading-spinner" style="display: none;">
+                        <div class="spinner"></div>
+                        <p>Analizando tu espacio con IA 5S...</p>
+                    </div>
+                </div>
+
+                <!-- Results Section -->
+                <div id="resultsSection" class="section" style="display: none;">
+                    <div id="resultsContainer"></div>
+                    <button id="newAnalysisBtn" class="btn btn-primary btn-full">
+                        Analizar otro espacio
+                    </button>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <footer class="footer">
+                <p>Impulsado por IA 5S | Metodología 5S para optimización de espacios</p>
+            </footer>
+        </div>
+    </main>
+
+    <script src="script.js"></script>
 </body>
 </html>
